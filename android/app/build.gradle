@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.techgl.coattails'
+    namespace 'com.techgl.gonkacapital'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'com.techgl.coattails'
+        applicationId 'com.techgl.gonkacapital'
         minSdkVersion 26
         targetSdkVersion 35
         versionCode 1

@@ -1,11 +1,11 @@
-"""Who Coattails follows, and why. Read WHO.md for the reasoning.
+"""Who Gonka Capital follows, and why. Read WHO.md for the reasoning.
 
 Every entry is verifiable from a primary source. Politicians must be current
 members of Congress (checked against the official membership lists at build
 time) who file electronically. Managers must still be filing 13Fs.
 """
 
-USER_AGENT = "Coattails data pipeline (personal use) gdrums650@gmail.com"
+USER_AGENT = "Gonka Capital data pipeline (personal use) gdrums650@gmail.com"
 
 # Politicians: matched to filings by exact last name + first-name prefix, and to
 # the membership list by bioguide id. `house_state_district` / `senate_state`

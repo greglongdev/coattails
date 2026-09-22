@@ -1,4 +1,4 @@
-# Who Coattails follows, and why
+# Who Gonka Capital follows, and why
 
 Two rules decided this list.
 
@@ -13,7 +13,7 @@ Two rules decided this list.
 
 They file **Form 13F** with the SEC: a list of US-listed stock holdings, due 45
 days after the end of each quarter, required of every manager holding more than
-$100 million in US equities. Coattails reads the filing itself and compares each
+$100 million in US equities. Gonka Capital reads the filing itself and compares each
 quarter with the one before it.
 
 | Who | Firm | Why |
@@ -43,7 +43,7 @@ quarter with the one before it.
 ### One structural note
 
 Pershing Square's holdings moved in 2026 from Pershing Square Capital Management
-to its public parent, Pershing Square Inc. Coattails follows both filer entities
+to its public parent, Pershing Square Inc. Gonka Capital follows both filer entities
 so the portfolio does not appear to vanish. Firms restructure; the config allows
 several filer IDs per person for exactly this reason.
 
@@ -54,7 +54,7 @@ of 2012. The House publishes reports through the Clerk; the Senate publishes the
 through its Office of Public Records. Two things limit what any app can show:
 
 - Amounts are **ranges** ($1,001 to $15,000, and so on), never exact figures.
-- Some members file **on paper**, as scanned images. Coattails does not guess at
+- Some members file **on paper**, as scanned images. Gonka Capital does not guess at
   those. A member's page says how many of their reports could not be read.
 
 The list is the members whose 2026 filings are electronic, frequent enough to be
@@ -86,7 +86,7 @@ actual parsed trades, not by reputation.
 
 ## What this list is not
 
-It is not a claim that these people beat the market, and Coattails shows no
+It is not a claim that these people beat the market, and Gonka Capital shows no
 performance numbers, because none can be calculated honestly from range-based,
 45-day-late disclosures. It is a list of people whose decisions are a matter of
 public record and worth reading.

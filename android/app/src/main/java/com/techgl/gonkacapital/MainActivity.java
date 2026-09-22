@@ -1,4 +1,4 @@
-package com.techgl.coattails;
+package com.techgl.gonkacapital;
 
 import android.content.Intent;
 import android.graphics.Color;
@@ -12,7 +12,7 @@ import android.app.Activity;
 import android.content.res.Configuration;
 
 /**
- * Coattails is a web app in a WebView. The app itself lives in assets/www and works
+ * Gonka Capital is a web app in a WebView. The app itself lives in assets/www and works
  * offline from the data bundled with the build; it fetches a newer data file when
  * the phone is online. Links to filings open in the phone's browser, never in here.
  */

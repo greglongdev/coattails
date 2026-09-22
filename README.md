@@ -1,4 +1,4 @@
-# Coattails
+# Gonka Capital
 
 An Android app that shows what well-known investors and members of Congress are
 buying and selling, read straight from the filings they are legally required to
@@ -74,7 +74,7 @@ signed, which is what sideloading needs; it is not for the Play Store.
 1. Put the APK in Google Drive and share the link, or copy it over USB.
 2. On the phone, open the file. Android asks permission to install from that app
    once; allow it.
-3. Open Coattails.
+3. Open Gonka Capital.
 
 The app carries a copy of the data, so it works the moment it opens, with or
 without a signal. When it is online it checks for a newer copy and keeps it.
@@ -89,4 +89,4 @@ showing the data built into the APK and says when it was built.
 
 ## Not investment advice
 
-Coattails reports public filings. It does not recommend anything.
+Gonka Capital reports public filings. It does not recommend anything.

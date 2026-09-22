@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- The app draws its own header, so the platform title bar is off. -->
-    <style name="CoattailsTheme" parent="@android:style/Theme.DeviceDefault.DayNight">
+    <style name="GonkaTheme" parent="@android:style/Theme.DeviceDefault.DayNight">
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         <item name="android:windowBackground">@color/bg</item>

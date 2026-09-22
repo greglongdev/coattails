@@ -42,7 +42,7 @@ function boot(hash) {
   vm.runInContext(fs.readFileSync(path.join(web, "format.js"), "utf8"), ctx);
   vm.runInContext(fs.readFileSync(path.join(web, "feed.js"), "utf8"), ctx);
   vm.runInContext(fs.readFileSync(path.join(web, "app.js"), "utf8"), ctx);
-  return { window, els, listeners, feed: window.COATTAILS_FEED };
+  return { window, els, listeners, feed: window.GONKA_FEED };
 }
 
 test("bundled feed is present and well formed", () => {

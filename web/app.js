@@ -1,10 +1,10 @@
-/* Coattails. Reads feed.json (bundled as feed.js), checks for a newer copy online,
+/* Gonka Capital. Reads feed.json (bundled as feed.js), checks for a newer copy online,
    and renders three screens. No framework, no build step. */
 (function () {
   "use strict";
 
-  var REMOTE_FEED = "https://raw.githubusercontent.com/greglongdev/coattails/main/data/feed.json";
-  var CACHE_KEY = "coattails.feed.v1";
+  var REMOTE_FEED = "https://raw.githubusercontent.com/greglongdev/gonka-capital/main/data/feed.json";
+  var CACHE_KEY = "gonka.feed.v1";
 
   var state = {
     feed: null,
@@ -30,7 +30,7 @@
   }
 
   function loadInitial() {
-    var bundled = window.COATTAILS_FEED || null;
+    var bundled = window.GONKA_FEED || null;
     var cached = null;
     try {
       var raw = localStorage.getItem(CACHE_KEY);
@@ -219,7 +219,7 @@
     var pols = f ? f.people.filter(function (p) { return p.group === "politician"; }).length : 0;
     var pros = f ? f.people.filter(function (p) { return p.group === "investor"; }).length : 0;
     $view.innerHTML = '<div class="prose">' +
-      "<p>Coattails shows what " + pros + " well-known investors and " + pols + " members of Congress have been buying and selling, taken straight from the public filings they are required to make.</p>" +
+      "<p>Gonka Capital shows what " + pros + " well-known investors and " + pols + " members of Congress have been buying and selling, taken straight from the public filings they are required to make.</p>" +
       "<h2>Where the numbers come from</h2>" +
       "<ul>" +
       "<li><b>Members of Congress</b> must report every stock trade within 45 days under the STOCK Act. The House posts these reports on the Clerk's website; the Senate posts them on its own filing site. Trades are reported in dollar ranges, not exact amounts, and many are made by a spouse or in a joint account. The app says which.</li>" +
@@ -231,7 +231,7 @@
       "<h2>Updates</h2>" +
       "<p>The app carries a copy of the data and checks for a newer one each time it opens. Every entry has a link to the original filing so you can read it yourself.</p>" +
       (f ? "<p>Data updated " + fmtDate(f.generated_at.slice(0, 10), true) + ".</p>" : "") +
-      "<p>Coattails is not investment advice.</p>" +
+      "<p>Gonka Capital is not investment advice.</p>" +
       "</div>";
     window.scrollTo(0, 0);
   }

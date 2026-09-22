@@ -41,7 +41,7 @@ jobs:
 
       - name: Commit if the data changed
         run: |
-          git config user.name "coattails bot"
+          git config user.name "gonka-capital bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/feed.json data/cusip_map.json web/feed.js android/app/src/main/assets/www/feed.js
           if git diff --cached --quiet; then
