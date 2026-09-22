@@ -12,7 +12,7 @@ Who is on the list, and why, is in [WHO.md](WHO.md).
 pipeline/   the data pipeline: reads the primary sources, writes data/feed.json
 web/        the whole app. Vanilla JS, no dependencies, works offline
 android/    WebView wrapper. ./gradlew assembleDebug builds the sideloadable APK
-tests/      Node tests for the app (node --test tests/)
+tests/      Node tests for the app (node --test tests/*.test.mjs)
 data/       feed.json (published), cusip_map.json (cache), cache/ (not committed)
 ```
 
@@ -51,7 +51,7 @@ is new. A full cold build takes about three minutes.
 
 ```
 python -m pytest pipeline/tests -q   # 25 tests, run against real filings
-node --test tests/                   # 13 tests, run against the real feed
+node --test tests/*.test.mjs   # 13 tests, run against the real feed
 ```
 
 The pipeline fixtures are actual PDFs and XML pulled from the Clerk, the Senate
