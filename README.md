@@ -16,6 +16,25 @@ tests/      Node tests for the app (node --test tests/*.test.mjs)
 data/       feed.json (published), cusip_map.json (cache), cache/ (not committed)
 ```
 
+`web/inset_test.html` is a local harness for checking the layout against a fake
+status bar. `scripts/bundle.py` names the files that ship, so it never reaches
+the APK.
+
+## The name on every screen
+
+The header carries the mark and "Gonka Capital" on all four screens; the screen
+name sits in the page below it. `web/logos.js` holds four marks and `MARK` at the
+top of `web/app.js` picks one. Changing it means changing that line and, to keep
+the launcher icon matched, `android/app/src/main/res/drawable/ic_fg.xml`.
+
+## System bars
+
+Android 15 and later draw every app edge to edge whether it asks or not, which
+put the header under the status bar. The app now measures the bars in
+`MainActivity` and hands the page their heights as `--inset-top` and friends, so
+the header and tab bar stay clear while the app's colours still run to the edges
+of the screen. In a plain browser those variables fall back to `env(safe-area-inset-*)`.
+
 ## The sources
 
 | What | Where it comes from | Lag |

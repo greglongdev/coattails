@@ -5,6 +5,7 @@
 
   var REMOTE_FEED = "https://raw.githubusercontent.com/greglongdev/gonka-capital/main/data/feed.json";
   var CACHE_KEY = "gonka.feed.v1";
+  var MARK = "risingG";   // one of LOGOS.names
 
   var state = {
     feed: null,
@@ -14,7 +15,7 @@
   };
 
   var $view = document.getElementById("view");
-  var $title = document.getElementById("title");
+  var $brandMark = document.getElementById("brand-mark");
   var $updated = document.getElementById("updated");
   var $sheet = document.getElementById("sheet");
   var $sheetBody = document.getElementById("sheet-body");
@@ -116,7 +117,6 @@
   }
 
   function renderLatest() {
-    $title.textContent = "Latest";
     if (!state.feed) { $view.innerHTML = '<div class="empty">No data yet.</div>'; return; }
     var f = state.filter;
     var events = state.feed.feed.filter(function (ev) {
@@ -127,7 +127,7 @@
       return true;
     });
     var shown = events.slice(0, 300);
-    var html = '<div class="seg">' +
+    var html = '<h2 class="screen-title">Latest</h2><div class="seg">' +
       seg("all", "Everyone") + seg("politicians", "Politicians") + seg("pros", "Investors") + "</div>";
     if (!shown.length) html += '<div class="empty">Nothing here yet.</div>';
     else html += groupByDay(shown, function (ev) { return "feed:" + state.feed.feed.indexOf(ev); });
@@ -141,11 +141,11 @@
   }
 
   function renderPeople() {
-    $title.textContent = "People";
     if (!state.feed) { $view.innerHTML = '<div class="empty">No data yet.</div>'; return; }
     var pols = state.feed.people.filter(function (p) { return p.group === "politician"; });
     var pros = state.feed.people.filter(function (p) { return p.group === "investor"; });
-    var html = '<div class="section-title">Investors</div>' + pros.map(personRow).join("") +
+    var html = '<h2 class="screen-title">People</h2>' +
+      '<div class="section-title">Investors</div>' + pros.map(personRow).join("") +
       '<div class="section-title">Politicians</div>' + pols.map(personRow).join("");
     $view.innerHTML = html;
     window.scrollTo(0, 0);
@@ -169,7 +169,6 @@
   function renderPerson(id) {
     var p = state.people[id];
     if (!p) { location.hash = "#people"; return; }
-    $title.textContent = p.group === "politician" ? "Politician" : "Investor";
     var html = '<a class="back" href="#people">&lsaquo; All people</a>';
     if (p.group === "politician") {
       html += '<div class="hero"><div class="n">' + esc(p.name) + '</div><div class="s">' + esc(p.title) +
@@ -214,11 +213,10 @@
   }
 
   function renderAbout() {
-    $title.textContent = "About";
     var f = state.feed;
     var pols = f ? f.people.filter(function (p) { return p.group === "politician"; }).length : 0;
     var pros = f ? f.people.filter(function (p) { return p.group === "investor"; }).length : 0;
-    $view.innerHTML = '<div class="prose">' +
+    $view.innerHTML = '<h2 class="screen-title">About</h2><div class="prose">' +
       "<p>Gonka Capital shows what " + pros + " well-known investors and " + pols + " members of Congress have been buying and selling, taken straight from the public filings they are required to make.</p>" +
       "<h2>Where the numbers come from</h2>" +
       "<ul>" +
@@ -325,6 +323,7 @@
   window.addEventListener("hashchange", route);
   window.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSheet(); });
 
+  $brandMark.innerHTML = LOGOS.get(MARK);
   loadInitial();
   route();
   checkForUpdate();

@@ -1,17 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The rising G, scaled into the adaptive icon's safe zone. Mirrors web/logos.js. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- A rising step line: one trade following another. -->
-    <path
-        android:strokeColor="#F6F5F1"
-        android:strokeWidth="6"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M32,72 L46,72 L46,58 L60,58 L60,44 L76,44" />
-    <path
-        android:fillColor="#F6F5F1"
-        android:pathData="M76,34 L84,44 L68,44 Z" />
+    <group
+        android:scaleX="0.9"
+        android:scaleY="0.9"
+        android:translateX="5.4"
+        android:translateY="6.3">
+        <path
+            android:pathData="M55,41a19,19 0 1 0 4,20H46"
+            android:strokeColor="#F6F5F1"
+            android:strokeWidth="9"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M64,55l17,-17"
+            android:strokeColor="#F6F5F1"
+            android:strokeWidth="9"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M70,36h12v12"
+            android:strokeColor="#F6F5F1"
+            android:strokeWidth="9"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
 </vector>

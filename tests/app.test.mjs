@@ -39,6 +39,7 @@ function boot(hash) {
   const { window, els, listeners } = makeDom();
   window.location.hash = hash;
   const ctx = vm.createContext(Object.assign(window, { console }));
+  vm.runInContext(fs.readFileSync(path.join(web, "logos.js"), "utf8"), ctx);
   vm.runInContext(fs.readFileSync(path.join(web, "format.js"), "utf8"), ctx);
   vm.runInContext(fs.readFileSync(path.join(web, "feed.js"), "utf8"), ctx);
   vm.runInContext(fs.readFileSync(path.join(web, "app.js"), "utf8"), ctx);
@@ -56,7 +57,7 @@ test("bundled feed is present and well formed", () => {
 test("Latest renders newest-first cards with a source-backed pill and person", () => {
   const { els, feed } = boot("#latest");
   const html = els.view.innerHTML;
-  assert.equal(els.title.textContent, "Latest");
+  assert.ok(html.includes('class="screen-title">Latest<'));
   assert.match(els.updated.textContent, /^Updated /);
   assert.ok(html.includes('class="seg"'));
   const first = feed.feed[0];
@@ -84,7 +85,7 @@ test("Investor page shows holdings summing to the filing and links to the SEC", 
   const { els, feed } = boot("#person/buffett");
   const p = feed.people.find(x => x.id === "buffett");
   const html = els.view.innerHTML;
-  assert.equal(els.title.textContent, "Investor");
+  assert.ok(html.includes("Berkshire Hathaway"));
   assert.ok(html.includes("Berkshire Hathaway"));
   assert.ok(html.includes(p.holdings[0].ticker));
   assert.ok(html.includes('href="' + p.quarters.at(-1).source + '"'));
@@ -97,13 +98,38 @@ test("Politician page lists every trade and flags unreadable paper filings", () 
   const { els, feed } = boot("#person/pelosi");
   const p = feed.people.find(x => x.id === "pelosi");
   const html = els.view.innerHTML;
-  assert.equal(els.title.textContent, "Politician");
+  assert.ok(html.includes("Rep. Nancy Pelosi"));
   assert.ok(html.includes("Rep. Nancy Pelosi (D-CA)"));
   const cards = (html.match(/data-ev="person:pelosi:/g) || []).length;
   assert.equal(cards, p.trades.length);
   assert.equal(html.includes("filed on paper"), p.unreadable_filings > 0);
   assert.ok(html.includes("(spouse)"), "Pelosi trades are reported under the spouse");
   assert.ok(!html.includes("<b>Nancy Pelosi</b>"), "the name is in the header, not on every card");
+});
+
+test("the brand mark and name show on every screen", () => {
+  for (const hash of ["#latest", "#people", "#person/buffett", "#about"]) {
+    const { els } = boot(hash);
+    assert.ok(els["brand-mark"].innerHTML.includes("<svg"), hash + " has no mark");
+    assert.ok(els["brand-mark"].innerHTML.includes("</svg>"), hash + " mark is truncated");
+  }
+  // The header is markup, not rendered per screen, so the name lives in the HTML file.
+  const shell = fs.readFileSync(path.join(web, "index.html"), "utf8");
+  assert.ok(shell.includes('class="brand-name">Gonka Capital<'));
+});
+
+test("every logo option renders and uses theme-aware ink", async () => {
+  const { createRequire } = await import("node:module");
+  const LOGOS = createRequire(import.meta.url)("../web/logos.js");
+  assert.deepEqual(LOGOS.names, ["monogram", "risingG", "steps", "crest"]);
+  for (const n of LOGOS.names) {
+    const svg = LOGOS.get(n);
+    assert.ok(svg.startsWith("<svg") && svg.endsWith("</svg>"), n);
+    assert.ok(svg.includes('viewBox="0 0 100 100"'), n + " is not on the shared canvas");
+    assert.ok(svg.includes("currentColor"), n + " ignores the theme colour");
+    assert.ok(!/#[0-9a-f]{3,6}/i.test(svg), n + " hardcodes a colour");
+  }
+  assert.equal(LOGOS.get("nope"), LOGOS.get("monogram"), "unknown name falls back");
 });
 
 test("About states the lags and the no-advice line", () => {
