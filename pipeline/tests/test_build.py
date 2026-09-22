@@ -15,6 +15,18 @@ def test_clean_asset_name():
     assert build.clean_asset_name("REOF XXV, LLC [AB]") == "REOF XXV, LLC"
 
 
+def test_recover_ticker_from_the_asset_name():
+    assert build.recover_ticker("WFC", "Wells Fargo") == "WFC"
+    assert build.recover_ticker(None, "SDZNY- Sandoz Group AG ADR") == "SDZNY"
+    assert build.recover_ticker(None, "SDZNY - Sandoz Group AG") == "SDZNY"
+    assert build.recover_ticker(None, "ACN - Accenture plc Class A Ordinary Shares (Ireland)") == "ACN"
+    # Nothing to recover: a real name that merely contains a dash, or no dash at all.
+    assert build.recover_ticker(None, "GS Managed Structured Note Strategy S&P 500 Linked Note") is None
+    assert build.recover_ticker(None, "ROLLS-ROYCE HOLDINGS PLC ADR") is None
+    assert build.recover_ticker(None, "Qualcomm Inc") is None
+    assert build.recover_ticker(None, "") is None
+
+
 def test_roster_integrity():
     ids = [p["id"] for p in config.POLITICIANS] + [i["id"] for i in config.INVESTORS]
     assert len(ids) == len(set(ids))

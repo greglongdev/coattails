@@ -133,6 +133,19 @@ def build_house(f: Fetcher | None, roster: list[dict]) -> dict[str, dict]:
 # Senate
 # --------------------------------------------------------------------------
 
+# Senate filers sometimes leave the ticker column blank but lead the asset name
+# with it: "SDZNY- Sandoz Group AG ADR", "ACN - Accenture plc Class A Shares".
+# The dash needs whitespace on at least one side, or "ROLLS-ROYCE" reads as ROLLS.
+LEADING_TICKER_RE = re.compile(r"^([A-Z]{1,5})(?:\s+[-\u2013]\s*|[-\u2013]\s+)(?=[A-Za-z])")
+
+
+def recover_ticker(ticker: str | None, name: str) -> str | None:
+    if ticker:
+        return ticker
+    m = LEADING_TICKER_RE.match(name or "")
+    return m.group(1) if m else None
+
+
 def _match_senate(filing: senate.SenateFiling, p: dict) -> bool:
     m = p["match"]
     return (filing.surname.lower() == m["last"].lower()
@@ -176,7 +189,7 @@ def build_senate(f: Fetcher | None, roster: list[dict]) -> dict[str, dict]:
                     "date": t["tx_date"],
                     "disclosed": fl.filed,
                     "action": SENATE_TYPES.get(t["tx_type"], "other"),
-                    "ticker": t["ticker"],
+                    "ticker": recover_ticker(t["ticker"], t["asset"]),
                     "name": t["asset"],
                     "kind": kind,
                     "amount": t["amount"],
