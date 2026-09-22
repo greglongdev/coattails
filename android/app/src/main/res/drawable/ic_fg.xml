@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- A rising step line: one trade following another. -->
+    <path
+        android:strokeColor="#F6F5F1"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M32,72 L46,72 L46,58 L60,58 L60,44 L76,44" />
+    <path
+        android:fillColor="#F6F5F1"
+        android:pathData="M76,34 L84,44 L68,44 Z" />
+</vector>

@@ -1,0 +1,48 @@
+name: refresh data
+
+# The politicians file all day; the SEC posts 13Fs at quarter end. A daily run
+# picks everything up. Anyone can also start it by hand from the Actions tab.
+on:
+  schedule:
+    - cron: "40 11 * * *"   # 11:40 UTC, after the overnight filings post
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          pip install --quiet requests beautifulsoup4 lxml pytest
+
+      - name: Rebuild the feed from the primary sources
+        run: python -m pipeline.build
+
+      - name: Test
+        run: |
+          python -m pytest pipeline/tests -q
+          python scripts/bundle.py
+          node --test tests/
+
+      - name: Commit if the data changed
+        run: |
+          git config user.name "coattails bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/feed.json data/cusip_map.json web/feed.js android/app/src/main/assets/www/feed.js
+          if git diff --cached --quiet; then
+            echo "no change"
+          else
+            git commit -m "data: refresh $(date -u +%Y-%m-%d)"
+            git push
+          fi
