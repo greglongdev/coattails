@@ -10,6 +10,7 @@
   var state = {
     feed: null,
     filter: "all",
+    side: "bullish",
     people: {},
     source: "bundled"
   };
@@ -32,6 +33,17 @@
     renderUpdated();
   }
 
+  function usable(feed) {
+    return !!feed && feed.schema === 1 &&
+      Array.isArray(feed.people) && feed.people.length &&
+      Array.isArray(feed.feed) &&
+      typeof feed.generated_at === "string";
+  }
+
+  function forgetCache() {
+    try { localStorage.removeItem(CACHE_KEY); } catch (e) { /* nothing to forget */ }
+  }
+
   function loadInitial() {
     var bundled = window.GONKA_FEED || null;
     var cached = null;
@@ -39,26 +51,54 @@
       var raw = localStorage.getItem(CACHE_KEY);
       if (raw) cached = JSON.parse(raw);
     } catch (e) { cached = null; }
+    if (!usable(cached)) {
+      if (cached) forgetCache();
+      cached = null;
+    }
     if (cached && (!bundled || cached.generated_at > bundled.generated_at)) {
       useFeed(cached, "cached");
-    } else if (bundled) {
+      // A stored feed that cannot be drawn must never outlive one launch, or the
+      // app opens broken for ever and never reaches the code that would replace it.
+      if (!draw()) {
+        forgetCache();
+        if (bundled) { useFeed(bundled, "bundled"); draw(); }
+      }
+      return;
+    }
+    if (bundled) {
       useFeed(bundled, "bundled");
+      draw();
+    }
+  }
+
+  function draw() {
+    try {
+      route();
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 
   function checkForUpdate() {
     if (!window.fetch) return;
+    var current = state.feed;
     fetch(REMOTE_FEED, { cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error("http " + r.status); return r.json(); })
       .then(function (feed) {
-        if (!feed || feed.schema !== 1 || !feed.people) throw new Error("bad feed");
-        if (!state.feed || feed.generated_at > state.feed.generated_at) {
-          try { localStorage.setItem(CACHE_KEY, JSON.stringify(feed)); } catch (e) { /* storage full: still use it this session */ }
-          useFeed(feed, "live");
-          route();
-        } else {
+        if (!usable(feed)) throw new Error("bad feed");
+        if (current && feed.generated_at <= current.generated_at) {
           renderUpdated();
+          return;
         }
+        useFeed(feed, "live");
+        if (!draw()) {
+          // It parsed but will not draw. Keep what was already working.
+          if (current) { useFeed(current, state.source); draw(); }
+          return;
+        }
+        // Only now is it worth keeping for next time.
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(feed)); } catch (e) { /* storage full */ }
       })
       .catch(function () { renderUpdated(); });
   }
@@ -116,6 +156,94 @@
       html += eventCard(ev, { key: keyFn(ev, i), hideWho: !!hideWho });
     });
     return html;
+  }
+
+  var SIDE_COPY = {
+    bullish: { seg: "Buying", verb: "bought", blurb: "Companies more than one of them bought, or bet on rising." },
+    bearish: { seg: "Selling", verb: "sold", blurb: "Companies more than one of them sold, or bet against." }
+  };
+
+  function renderAgree() {
+    if (!state.feed || !state.feed.consensus) {
+      $view.innerHTML = '<div class="empty">No data yet.</div>';
+      return;
+    }
+    var c = state.feed.consensus;
+    var groups = (c.groups || []).filter(function (g) { return g.direction === state.side; });
+    var html = '<h2 class="screen-title">Agreed</h2>' +
+      '<p class="lede">When more than one of these people makes the same move on the same company. ' +
+      "Last " + Math.round(c.window_days / 30) + " months.</p>" +
+      '<div class="seg">' +
+      '<button data-side="bullish"' + (state.side === "bullish" ? ' class="on"' : "") + ">Buying</button>" +
+      '<button data-side="bearish"' + (state.side === "bearish" ? ' class="on"' : "") + ">Selling</button>" +
+      "</div>";
+
+    if (!groups.length) {
+      html += '<div class="empty">Nobody agreed on anything here in the last ' +
+        Math.round(c.window_days / 30) + " months.</div>";
+    } else {
+      html += groups.map(function (g, i) {
+        var names = g.people.map(function (m) {
+          var p = state.people[m.person];
+          return (p && (p.short || p.name)) || m.person;
+        });
+        return '<button class="card" data-agree="' + esc(g.ticker + "|" + g.direction) + '">' +
+          '<div class="row"><span class="ticker">' + esc(g.ticker) + "</span>" +
+          '<span class="pill ' + (g.direction === "bullish" ? "buy" : "sell") + '">' +
+          g.count + " " + SIDE_COPY[g.direction].verb + "</span></div>" +
+          '<div class="name">' + esc(g.name) + "</div>" +
+          '<div class="who">' + esc(joinNames(names)) + "</div></button>";
+      }).join("");
+    }
+    $view.innerHTML = html;
+    window.scrollTo(0, 0);
+  }
+
+  function joinNames(names) {
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return names[0] + " and " + names[1];
+    return names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+  }
+
+  function findGroup(key) {
+    var c = state.feed && state.feed.consensus;
+    if (!c || !c.groups) return null;
+    var bits = String(key).split("|");
+    for (var i = 0; i < c.groups.length; i++) {
+      if (c.groups[i].ticker === bits[0] && c.groups[i].direction === bits[1]) return c.groups[i];
+    }
+    return null;
+  }
+
+  function showAmount(amount) {
+    // A range gets shortened. A single figure is already how the pipeline wrote it,
+    // and running it through the range shortener dropped its B or M.
+    return /\s-\s|Over/.test(amount) ? compactRange(amount) : amount;
+  }
+
+  function openAgree(g) {
+    if (!g) return;   // the feed can be replaced between a screen drawing and a tap
+    var rows = g.people.map(function (m) {
+      var p = state.people[m.person];
+      var who = p ? (p.title || (p.name + ", " + p.firm)) : m.person;
+      var amount = m.amount ? '<div class="s">' + esc(showAmount(m.amount)) + "</div>" : "";
+      var when = /^\d{4}-\d{2}-\d{2}$/.test(m.when) ? fmtDate(m.when, true) : m.when;
+      return '<a class="link-row" href="' + esc(m.source) + '" target="_blank" rel="noopener">' +
+        '<span class="txt"><span class="n">' + esc(who) + "</span>" +
+        '<span class="s">' + esc(m.did) + ", " + esc(when) + "</span>" + amount + "</span>" +
+        '<span class="chev">&nearr;</span></a>';
+    }).join("");
+    $sheetBody.innerHTML =
+      '<div class="row"><span class="ticker">' + esc(g.ticker) + "</span>" +
+      '<span class="pill ' + (g.direction === "bullish" ? "buy" : "sell") + '">' +
+      g.count + " " + SIDE_COPY[g.direction].verb + "</span></div>" +
+      '<div class="name">' + esc(g.name) + "</div>" +
+      '<p class="note" style="margin:14px 0 4px">Each line links to the filing it came from.</p>' +
+      '<div class="links">' + rows + "</div>" +
+      '<div class="note">Counted once each, using their most recent clear move. A day or a quarter ' +
+      "where someone both bought and sold is skipped, and buying put options counts as betting against.</div>";
+    $sheet.hidden = false;
+    document.body.style.overflow = "hidden";
   }
 
   function renderLatest() {
@@ -318,19 +446,29 @@
     document.body.style.overflow = "";
   }
 
+  // The phone's back gesture should close an open sheet before it leaves the app.
+  // The wrapper asks this first and only goes back if the answer is no.
+  window.__closeSheet = function () {
+    if ($sheet.hidden) return false;
+    closeSheet();
+    return true;
+  };
+
   // ------------------------------------------------------------- routing
 
   function route() {
-    var h = location.hash || "#latest";
+    var h = location.hash || "#agree";
     closeSheet();
     var tab = h.split("/")[0].slice(1);
     document.querySelectorAll(".tab").forEach(function (t) {
-      t.classList.toggle("on", t.dataset.tab === tab || (tab === "person" && t.dataset.tab === "people"));
+      var want = tab === "person" ? "people" : (tab || "agree");
+      t.classList.toggle("on", t.dataset.tab === want);
     });
     if (h.indexOf("#person/") === 0) renderPerson(h.slice(8));
     else if (h === "#people") renderPeople();
     else if (h === "#about") renderAbout();
-    else renderLatest();
+    else if (h === "#latest") renderLatest();
+    else renderAgree();
     measureBars();
   }
 
@@ -338,8 +476,12 @@
     var t = e.target;
     var card = t.closest && t.closest("[data-ev]");
     if (card) { var ev = findEvent(card.dataset.ev); if (ev) openSheet(ev); return; }
+    var ab = t.closest && t.closest("[data-agree]");
+    if (ab) { openAgree(findGroup(ab.dataset.agree)); return; }
     var fb = t.closest && t.closest("[data-filter]");
     if (fb) { state.filter = fb.dataset.filter; renderLatest(); return; }
+    var sb = t.closest && t.closest("[data-side]");
+    if (sb) { state.side = sb.dataset.side; renderAgree(); return; }
     if (t.closest && t.closest("[data-close]")) { closeSheet(); }
   });
 
@@ -371,7 +513,7 @@
 
   $brandMark.innerHTML = LOGOS.get(MARK);
   loadInitial();
-  route();
+  if (!state.feed) { route(); }
   measureBars();
   window.addEventListener("resize", measureBars);
   if (window.ResizeObserver) {

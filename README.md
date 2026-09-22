@@ -20,6 +20,15 @@ data/       feed.json (published), cusip_map.json (cache), cache/ (not committed
 status bar. `scripts/bundle.py` names the files that ship, so it never reaches
 the APK.
 
+## Agreed, the screen it opens on
+
+The app's first screen is not the ledger; it is the companies that two or more of
+the twenty moved the same way inside 180 days. `pipeline/consensus.py` computes it
+from the same feed, with three rules that keep it from lying: a bought put is a
+bearish bet, anyone who moved both ways on a company is excluded from it, and
+everything aligns on when a trade happened rather than when it was reported. The
+reasoning is in DECISIONS.md and the rules are stated in SPEC.md.
+
 ## The name on every screen
 
 The header carries the mark and "Gonka Capital" on all four screens; the screen
@@ -69,8 +78,8 @@ is new. A full cold build takes about three minutes.
 ## Tests
 
 ```
-python -m pytest pipeline/tests -q   # 25 tests, run against real filings
-node --test tests/*.test.mjs   # 13 tests, run against the real feed
+python -m pytest pipeline/tests -q   # 50 tests, run against real filings
+node --test tests/*.test.mjs         # 27 tests, run against the real feed
 ```
 
 The pipeline fixtures are actual PDFs and XML pulled from the Clerk, the Senate

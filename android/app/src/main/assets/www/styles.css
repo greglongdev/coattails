@@ -108,6 +108,7 @@ button.card:active { transform: scale(0.995); }
 .pill.buy { background: var(--buy-bg); color: var(--buy); }
 .pill.sell { background: var(--sell-bg); color: var(--sell); }
 .amount { font-size: 17px; font-weight: 600; white-space: nowrap; }
+.lede { font-size: 17px; color: var(--muted); margin: 0 0 12px; }
 .day { font-size: 15px; font-weight: 600; color: var(--muted); margin: 18px 4px 8px; }
 .day:first-child { margin-top: 2px; }
 .empty { color: var(--muted); padding: 40px 12px; text-align: center; font-size: 18px; }

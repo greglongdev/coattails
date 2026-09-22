@@ -66,6 +66,141 @@ test("bundled feed is present and well formed", () => {
   assert.equal(feed.warnings.length, 0);
 });
 
+test("the app opens on Agreed, the screen that answers the question", () => {
+  const { els, feed } = boot("");
+  const html = els.view.innerHTML;
+  assert.ok(html.includes('class="screen-title">Agreed<'));
+  assert.ok(feed.consensus.groups.length > 0, "the real feed should carry consensus");
+  // Buying is the default side, and only bullish groups show there.
+  const bulls = feed.consensus.groups.filter(g => g.direction === "bullish");
+  assert.equal((html.match(/class="card"/g) || []).length, bulls.length);
+  assert.ok(html.includes(bulls[0].ticker));
+  assert.ok(!/undefined|NaN|\[object/.test(html));
+});
+
+test("Agreed names the people and never shows a group of one", () => {
+  const { els, feed } = boot("#agree");
+  const html = els.view.innerHTML;
+  const g = feed.consensus.groups.find(x => x.direction === "bullish");
+  const shortOf = (id) => feed.people.find(q => q.id === id).short;
+  for (const m of g.people) assert.ok(html.includes(shortOf(m.person)), m.person);
+  assert.ok(html.includes(g.count + " bought"));
+  for (const x of feed.consensus.groups) assert.ok(x.count >= 2, x.ticker);
+});
+
+test("Agreed groups every person to a filing link", () => {
+  const { feed } = boot("#agree");
+  for (const g of feed.consensus.groups) {
+    for (const m of g.people) {
+      assert.match(m.source, /^https:\/\//);
+      assert.ok(m.did && m.when, g.ticker + " / " + m.person);
+    }
+  }
+});
+
+test("tapping an Agreed company opens every contributor with a filing link", () => {
+  const { window, els, feed, listeners } = boot("#agree");
+  const g = feed.consensus.groups.find(x => x.direction === "bullish");
+  // Simulate the tap the same way the app receives it.
+  const card = { dataset: { agree: g.ticker + "|" + g.direction } };
+  listeners.click({ target: { closest: (sel) => (sel === "[data-agree]" ? card : null) } });
+  const sheet = els["sheet-body"].innerHTML;
+  assert.equal(els.sheet.hidden, false);
+  assert.ok(sheet.includes(g.ticker));
+  for (const m of g.people) {
+    assert.ok(sheet.includes(m.source), "no link for " + m.person);
+    assert.ok(sheet.includes(m.did), "no plain-English action for " + m.person);
+  }
+  // The honesty rules are stated where the numbers are, not buried in About.
+  assert.ok(sheet.includes("both bought and sold is skipped"));
+  assert.ok(sheet.includes("put options counts as betting against"));
+  assert.ok(!/undefined|NaN/.test(sheet));
+  // A figure the pipeline already formatted keeps its size suffix; a range is shortened.
+  for (const m of g.people) {
+    if (!m.amount) continue;
+    if (/\s-\s/.test(m.amount)) assert.ok(sheet.includes("to $"), "range not shortened");
+    else assert.ok(sheet.includes(m.amount), "lost the amount " + m.amount);
+  }
+});
+
+test("a tap survives the feed being replaced underneath it", () => {
+  // checkForUpdate can swap state.feed and re-route between a screen drawing and
+  // a tap landing, so a card must say which company it is, not which row it was.
+  const { window, els, feed, listeners } = boot("#agree");
+  const g = feed.consensus.groups.find(x => x.direction === "bullish");
+  const tap = (key) => listeners.click({
+    target: { closest: (sel) => (sel === "[data-agree]" ? { dataset: { agree: key } } : null) }
+  });
+  // A company that is no longer in the feed opens nothing rather than throwing.
+  els.sheet.hidden = true;
+  tap("NOTATICKER|bullish");
+  assert.equal(els.sheet.hidden, true);
+  // The wrong direction for a real ticker is also not a match.
+  tap(g.ticker + "|sideways");
+  assert.equal(els.sheet.hidden, true);
+  // The real one still opens.
+  tap(g.ticker + "|" + g.direction);
+  assert.equal(els.sheet.hidden, false);
+  assert.ok(els["sheet-body"].innerHTML.includes(g.ticker));
+});
+
+test("everyone is named the way they are actually known", () => {
+  const { feed } = boot("#agree");
+  const by = Object.fromEntries(feed.people.map(p => [p.id, p.short]));
+  // A last-token guess called the Gates Foundation Trust "Trust" and lost half
+  // of a compound surname, so the short name is carried in the data instead.
+  assert.equal(by["gates-trust"], "Gates Foundation");
+  assert.equal(by["mcclain-delaney"], "McClain Delaney");
+  assert.equal(by["smith"], "Terry Smith");
+  for (const p of feed.people) {
+    assert.ok(p.short && p.short.length > 1, p.id);
+    assert.ok(!/^(Trust|Foundation|Jr\.?|Inc\.?)$/i.test(p.short), p.id + " is named " + p.short);
+  }
+});
+
+test("a feed that cannot be drawn is never kept", () => {
+  // One bad publish used to be cached before it was used, and the app then
+  // opened broken for ever without ever reaching the code that would replace it.
+  const { window, els, feed } = boot("#agree");
+  const broken = JSON.parse(JSON.stringify(feed));
+  delete broken.feed;              // renderLatest would throw on this
+  broken.generated_at = "2099-01-01T00:00:00Z";
+  assert.equal(window.localStorage.getItem("gonka.feed.v1"), null,
+    "nothing should be cached until it has drawn");
+  // And a stored feed that fails validation is discarded, not loaded.
+  window.localStorage.setItem("gonka.feed.v1", JSON.stringify(broken));
+  const second = boot("#agree");
+  assert.equal(second.window.localStorage.getItem("gonka.feed.v1"), null);
+  assert.ok(second.els.view.innerHTML.includes("Agreed"));
+});
+
+test("back closes an open sheet before it leaves the app", () => {
+  const { window, els, feed, listeners } = boot("#agree");
+  assert.equal(window.__closeSheet(), false, "nothing to close yet");
+  const g = feed.consensus.groups.find(x => x.direction === "bullish");
+  listeners.click({
+    target: { closest: (sel) => (sel === "[data-agree]" ? { dataset: { agree: g.ticker + "|" + g.direction } } : null) }
+  });
+  assert.equal(els.sheet.hidden, false);
+  assert.equal(window.__closeSheet(), true, "should report that it handled back");
+  assert.equal(els.sheet.hidden, true);
+  assert.equal(window.__closeSheet(), false, "and nothing left to close");
+});
+
+test("the Selling side shows only bearish groups", () => {
+  const { els, feed, listeners } = boot("#agree");
+  const btn = { dataset: { side: "bearish" } };
+  listeners.click({ target: { closest: (sel) => (sel === "[data-side]" ? btn : null) } });
+  const html = els.view.innerHTML;
+  const bears = feed.consensus.groups.filter(g => g.direction === "bearish");
+  assert.equal((html.match(/class="card"/g) || []).length, bears.length);
+  assert.ok(html.includes(bears[0].count + " sold"));
+  // A company both sides agreed on must not leak across.
+  const bulls = feed.consensus.groups.filter(g => g.direction === "bullish").map(g => g.ticker);
+  const shown = (html.match(/class="ticker">([A-Z0-9.\-\/]+)</g) || []).map(m => m.split(">")[1].slice(0, -1));
+  for (const t of shown) assert.ok(bears.some(g => g.ticker === t), t + " is not a bearish group");
+});
+
 test("Latest renders newest-first cards with a source-backed pill and person", () => {
   const { els, feed } = boot("#latest");
   const html = els.view.innerHTML;
@@ -120,7 +255,7 @@ test("Politician page lists every trade and flags unreadable paper filings", () 
 });
 
 test("the brand mark and name show on every screen", () => {
-  for (const hash of ["#latest", "#people", "#person/buffett", "#about"]) {
+  for (const hash of ["#agree", "#latest", "#people", "#person/buffett", "#about"]) {
     const { els } = boot(hash);
     assert.ok(els["brand-mark"].innerHTML.includes("<svg"), hash + " has no mark");
     assert.ok(els["brand-mark"].innerHTML.includes("</svg>"), hash + " mark is truncated");
@@ -188,7 +323,7 @@ test("measuring the bars never walks their height upward", () => {
 test("copy has no emojis or double hyphens", () => {
   // The gate is about what the reader sees, so it reads the rendered screens.
   // CSS custom properties in the source (--top-h) are code, not copy.
-  for (const hash of ["#latest", "#people", "#person/buffett", "#person/pelosi", "#about"]) {
+  for (const hash of ["#agree", "#latest", "#people", "#person/buffett", "#person/pelosi", "#about"]) {
     const { els } = boot(hash);
     const visible = els.view.innerHTML.replace(/<[^>]*>/g, " ");
     assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(visible), hash + " shows an emoji");

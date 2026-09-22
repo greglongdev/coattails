@@ -16,7 +16,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import config, figi, house, members, sec13f, senate
+from . import config, consensus, figi, house, members, sec13f, senate
 from .fetch import Fetcher
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -252,6 +252,21 @@ def _cusip_lookup(cache: dict, cusip: str) -> dict:
     return {"ticker": d.get("ticker"), "figi_name": d.get("name")}
 
 
+def render_changes(latest: sec13f.Quarter, prior: sec13f.Quarter | None, cusips: dict) -> list[dict]:
+    out = []
+    for c in sec13f.diff_quarters(latest, prior):
+        lk = _cusip_lookup(cusips, c.position.cusip)
+        out.append({
+            "kind": c.kind, "ticker": lk["ticker"],
+            "name": c.position.issuer.title() if c.position.issuer.isupper() else c.position.issuer,
+            "cusip": c.position.cusip, "put_call": c.position.put_call,
+            "shares": c.shares, "prev_shares": c.prev_shares,
+            "pct": round(c.pct, 1) if c.pct is not None else None,
+            "value": c.position.value,
+        })
+    return out
+
+
 def render_investor(inv: dict, q: list[sec13f.Quarter], cusips: dict) -> dict:
     latest = q[-1] if q else None
     prior = q[-2] if len(q) > 1 else None
@@ -265,24 +280,21 @@ def render_investor(inv: dict, q: list[sec13f.Quarter], cusips: dict) -> dict:
                 "cusip": p.cusip, "put_call": p.put_call, "shares": p.shares, "value": p.value,
                 "weight": round(p.value / total * 100, 2),
             })
-    changes = []
-    for c in sec13f.diff_quarters(latest, prior) if latest else []:
-        lk = _cusip_lookup(cusips, c.position.cusip)
-        changes.append({
-            "kind": c.kind, "ticker": lk["ticker"],
-            "name": c.position.issuer.title() if c.position.issuer.isupper() else c.position.issuer,
-            "cusip": c.position.cusip, "put_call": c.position.put_call,
-            "shares": c.shares, "prev_shares": c.prev_shares,
-            "pct": round(c.pct, 1) if c.pct is not None else None,
-            "value": c.position.value,
-        })
+    changes = render_changes(latest, prior, cusips) if latest else []
+    # One entry per quarter transition, keyed by the quarter the moves happened in.
+    by_quarter = {}
+    for i in range(1, len(q)):
+        by_quarter[q[i].period] = render_changes(q[i], q[i - 1], cusips)
+
     return {
-        "id": inv["id"], "name": inv["name"], "group": "investor", "firm": inv["firm"], "why": inv["why"],
+        "id": inv["id"], "name": inv["name"], "short": inv["short"], "group": "investor",
+        "firm": inv["firm"], "why": inv["why"],
         "quarters": [{"period": x.period, "filed": x.filed, "total_value": x.total_value,
                       "positions": len(x.positions), "source": x.filings[-1].index_url if x.filings else None}
                      for x in q],
         "holdings": holdings,
         "changes": changes,
+        "quarter_changes": by_quarter,
     }
 
 
@@ -315,7 +327,7 @@ def build(offline: bool = False) -> dict:
         else:
             title = f"Sen. {p['name']} ({mem.party}-{mem.state})" if mem else f"Sen. {p['name']}"
         people.append({
-            "id": p["id"], "name": p["name"], "group": "politician", "chamber": p["chamber"],
+            "id": p["id"], "name": p["name"], "short": p["short"], "group": "politician", "chamber": p["chamber"],
             "title": title, "party": mem.party if mem else None, "state": mem.state if mem else None,
             "active": mem is not None, "why": p["why"],
             "filings": data["filings"], "unreadable_filings": data["unreadable"],
@@ -340,11 +352,15 @@ def build(offline: bool = False) -> dict:
         people.append(render_investor(inv, q, cusips))
 
     feed = build_feed(people)
+    today = dt.date.today().isoformat()
+    agree = consensus.build(people, today)
+    log(f"consensus: {len(agree['groups'])} companies with two or more agreeing since {agree['since']}")
     return {
         "schema": 1,
         "generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "people": people,
         "feed": feed,
+        "consensus": agree,
         "warnings": warnings,
         "sources": {
             "house": "https://disclosures-clerk.house.gov/FinancialDisclosure",
@@ -395,7 +411,8 @@ def main(argv=None):
     Path(a.out).write_text(json.dumps(feed, separators=(",", ":"), ensure_ascii=False) + "\n")
     n_tr = sum(len(p.get("trades", [])) for p in feed["people"])
     n_ch = sum(len(p.get("changes", [])) for p in feed["people"])
-    log(f"wrote {a.out}: {len(feed['people'])} people, {n_tr} trades, {n_ch} quarterly changes, {len(feed['feed'])} feed events")
+    log(f"wrote {a.out}: {len(feed['people'])} people, {n_tr} trades, {n_ch} quarterly changes, "
+        f"{len(feed['feed'])} feed events, {len(feed['consensus']['groups'])} consensus groups")
     for w in feed["warnings"]:
         log("WARNING:", w)
 

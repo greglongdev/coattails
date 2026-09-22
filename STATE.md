@@ -4,7 +4,7 @@ Stage: **ship**. Built and delivered 2026-09-22. No revenue, none planned.
 
 ## What is verified working
 
-- 41 tests green: 26 python (`python -m pytest pipeline/tests -q`), 15 node (`node --test tests/*.test.mjs`).
+- 77 tests green: 50 python (`python -m pytest pipeline/tests -q`), 27 node (`node --test tests/*.test.mjs`).
 - APK at `GonkaCapital-v1.0.0.apk`, installed and driven on two emulators: Android 14 (API 34) and Android 16 (API 36).
 - Daily GitHub Action `refresh data` rebuilds `data/feed.json` from the primary sources and commits it; verified green three times, including one run that committed a real refresh.
 - The installed app fetches that file and shows the live date in green; verified on a clean install.
@@ -17,6 +17,32 @@ Stage: **ship**. Built and delivered 2026-09-22. No revenue, none planned.
    - The bars measured their own height and wrote it back into their own `min-height`. Sub-pixel rounding then grew the header by 1px on every ResizeObserver tick (242, 243, 244...). The measurement now drives the body's padding only, never the bars themselves.
    - Android reports the status bar as *padding*, which leaves the content box unchanged, so a default ResizeObserver never fired and the page kept a too-small header height. The observer now watches the border box, with timed re-reads as a backstop.
 2. **Source links on About.** Five rows linking to the House Clerk, the Senate EFD, the SEC on Form 13F, the House Ethics Committee on the STOCK Act, and this repo. Each verified to resolve and to open in the phone's browser rather than inside the app.
+
+## Shipped 2026-09-22 (second pass)
+
+3. **Consensus, as the Agreed screen.** Companies two or more of the twenty moved
+   the same way inside 180 days, most agreed-upon first, split into Buying and
+   Selling. Tapping one lists every contributor, what they did in plain English,
+   when, how much where the filing says, and a link to that filing. It is the
+   first tab and the screen the app opens on. Engine at `pipeline/consensus.py`,
+   rules in SPEC.md, reasoning in DECISIONS.md.
+   Current real output: 51 companies. The deepest are MSFT with six sellers and
+   GOOG with five buyers (Buffett, Tepper, Klarman, Hohn and Rep. Fields).
+   Gottheimer is correctly absent from the Microsoft group because he rolled
+   options rather than taking a side.
+
+   A fresh-context adversarial review of this feature found eleven defects, all
+   fixed in the same session. The four that were live: the people line named the
+   Gates Foundation Trust "Trust" and truncated a compound surname; a person's
+   second move in a quarter was silently dropped, so Druckenmiller's Amazon row
+   showed his smaller options leg and hid a larger share purchase; one malformed
+   remote publish could be cached before it was proven to render, which bricked
+   the app permanently; and 13F rows carried no amount. The rest were latent:
+   an exchange on an option counted as a sale, an unrecognised put/call flag
+   read as an ordinary holding, closing a call counted as bearish, the window
+   was 181 days. Two more found by hand afterwards: the app re-formatted
+   already-formatted amounts and stripped their B and M, and the back gesture
+   left the app instead of closing an open sheet.
 
 ## Known defects, not fixed
 

@@ -121,7 +121,9 @@ public class MainActivity extends Activity {
             right = insets.getSystemWindowInsetRight();
         }
         float d = getResources().getDisplayMetrics().density;
-        return "(function(r){"
+        // Insets can arrive before the document has a root element, so this has to
+        // survive being run against nothing; onPageFinished applies them again.
+        return "(function(r){if(!r)return;"
                 + "r.style.setProperty('--inset-top','" + px(top, d) + "');"
                 + "r.style.setProperty('--inset-bottom','" + px(bottom, d) + "');"
                 + "r.style.setProperty('--inset-left','" + px(left, d) + "');"
@@ -141,11 +143,17 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        // In-app navigation is hash based, so history walks the screens.
-        if (web.canGoBack()) {
-            web.goBack();
-        } else {
-            super.onBackPressed();
-        }
+        // Back should dismiss an open sheet before it leaves the screen, and leave
+        // the app before it does either. The page answers whether it handled it.
+        web.evaluateJavascript("window.__closeSheet ? window.__closeSheet() : false", value -> {
+            if ("true".equals(value)) {
+                return;
+            }
+            if (web.canGoBack()) {
+                web.goBack();
+            } else {
+                finish();
+            }
+        });
     }
 }
