@@ -45,7 +45,9 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);   // localStorage holds the last downloaded feed
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
-        s.setTextZoom(100);
+        // No setTextZoom: the WebView then honours the phone's own font size setting,
+        // which the intended reader may well have turned up. The page measures its
+        // own header and tab bar so the layout follows whatever size that is.
 
         web.setWebViewClient(new WebViewClient() {
             @Override

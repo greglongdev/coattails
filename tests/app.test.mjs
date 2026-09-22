@@ -19,9 +19,17 @@ function makeDom() {
     });
   }
   const listeners = {};
+  // The app measures its own header and tab bar, so the stub gives them a size.
+  function bar(h) {
+    return { getBoundingClientRect: () => ({ height: h }), style: {} };
+  }
+  const bars = { ".top": bar(56), ".tabs": bar(64) };
+  const root = { style: { setProperty(k, v) { this[k] = v; } } };
   const document = {
     getElementById: el,
+    querySelector: (sel) => bars[sel] || null,
     querySelectorAll: () => [],
+    documentElement: root,
     addEventListener(type, fn) { listeners[type] = fn; },
     body: { style: {} }
   };
@@ -29,7 +37,11 @@ function makeDom() {
   const window = {
     document, location: { hash: "" }, addEventListener(type, fn) { listeners["w:" + type] = fn; },
     scrollTo() {}, localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } },
-    fetch: undefined, listeners
+    fetch: undefined, listeners, root,
+    getComputedStyle: () => ({ getPropertyValue: () => "0px" }),
+    // Deferred re-measures: run them straight away so a boot settles synchronously.
+    setTimeout: (fn) => { fn(); return 0; },
+    ResizeObserver: undefined
   };
   window.window = window; window.self = window;
   return { window, document, els, listeners };
@@ -140,11 +152,52 @@ test("About states the lags and the no-advice line", () => {
   assert.ok(!/undefined/.test(html));
 });
 
-test("copy has no emojis or double hyphens", () => {
-  for (const f of ["app.js", "index.html"]) {
-    const src = fs.readFileSync(path.join(web, f), "utf8");
-    assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(src), f + " has an emoji");
-    const copy = src.replace(/<!--[\s\S]*?-->/g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
-    assert.ok(!/--/.test(copy), f + " has a double hyphen");
+test("About links out to every authority the app reads", () => {
+  const { els } = boot("#about");
+  const html = els.view.innerHTML;
+  for (const host of ["disclosures-clerk.house.gov", "efdsearch.senate.gov", "www.sec.gov",
+                      "ethics.house.gov", "github.com/greglongdev/gonka-capital"]) {
+    assert.ok(html.includes(host), "About does not link to " + host);
   }
+  // Every one opens outside the app, and safely.
+  const links = html.match(/<a class="link-row"[^>]*>/g) || [];
+  assert.equal(links.length, 5);
+  for (const a of links) {
+    assert.ok(a.includes('target="_blank"') && a.includes('rel="noopener"'), a);
+    assert.ok(a.includes('href="https://'), a);
+  }
+});
+
+test("the bars report their own height so a big system font cannot hide content", () => {
+  const { window } = boot("#latest");
+  assert.equal(window.root.style["--header-h"], "56px");
+  assert.equal(window.root.style["--tabbar-h"], "64px");
+});
+
+test("measuring the bars never walks their height upward", () => {
+  // The old version fed the measurement back into the header's own min-height,
+  // so sub-pixel rounding grew it by 1px on every observer tick.
+  const { window, listeners } = boot("#latest");
+  const tick = listeners["w:resize"];
+  const first = window.root.style["--header-h"];
+  for (let i = 0; i < 50; i++) tick();
+  assert.equal(window.root.style["--header-h"], first);
+  assert.equal(window.root.style["--tabbar-h"], "64px");
+});
+
+test("copy has no emojis or double hyphens", () => {
+  // The gate is about what the reader sees, so it reads the rendered screens.
+  // CSS custom properties in the source (--top-h) are code, not copy.
+  for (const hash of ["#latest", "#people", "#person/buffett", "#person/pelosi", "#about"]) {
+    const { els } = boot(hash);
+    const visible = els.view.innerHTML.replace(/<[^>]*>/g, " ");
+    assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(visible), hash + " shows an emoji");
+    assert.ok(!/--/.test(visible), hash + " shows a double hyphen");
+    for (const tell of ["seamlessly", "effortlessly", "elevate", "unleash", "empower",
+                        "game-changer", "Whether you're", "Look no further"]) {
+      assert.ok(!visible.toLowerCase().includes(tell.toLowerCase()), hash + " uses " + tell);
+    }
+  }
+  const shell = fs.readFileSync(path.join(web, "index.html"), "utf8");
+  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(shell), "index.html has an emoji");
 });

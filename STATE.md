@@ -10,10 +10,16 @@ Stage: **ship**. Built and delivered 2026-09-22. No revenue, none planned.
 - The installed app fetches that file and shows the live date in green; verified on a clean install.
 - Every one of the 2,091 feed items deep-links to its own filing.
 
+## Fixed 2026-09-22
+
+1. **Accessibility regression (mine).** `setTextZoom(100)` was making the app ignore the phone's font-size setting. Removed. Verified at 1.5x system font on Android 16: nothing hides behind the bars.
+   Two bugs surfaced while fixing it, both found on device and both now covered by tests:
+   - The bars measured their own height and wrote it back into their own `min-height`. Sub-pixel rounding then grew the header by 1px on every ResizeObserver tick (242, 243, 244...). The measurement now drives the body's padding only, never the bars themselves.
+   - Android reports the status bar as *padding*, which leaves the content box unchanged, so a default ResizeObserver never fired and the page kept a too-small header height. The observer now watches the border box, with timed re-reads as a backstop.
+2. **Source links on About.** Five rows linking to the House Clerk, the Senate EFD, the SEC on Form 13F, the House Ethics Committee on the STOCK Act, and this repo. Each verified to resolve and to open in the phone's browser rather than inside the app.
+
 ## Known defects, not fixed
 
-1. **Accessibility regression (real, mine).** `MainActivity` calls `WebSettings.setTextZoom(100)`, which makes the app ignore the phone's system font-size setting. The intended user is an older reader who may well have large text turned on. One line to fix; needs an on-device check at a large system font, because the fixed header and tab bar have to survive the reflow.
-2. **The About screen has no links.** It describes the STOCK Act and Form 13F in prose but links nowhere, so a reader who wants to check the claims has no route from the explanation to the authority.
 3. **The feed repeats itself.** Same person, same ticker, same day arrives as separate cards (4 identical-looking MSFT rows lead the feed today). Nothing is wrong in the data; the presentation just refuses to group.
 4. **Two people are half the feed.** Gottheimer (560) and McClain Delaney (486) of 2,091 events. There is no way to mute anyone, so the quiet, higher-signal filers are buried.
 

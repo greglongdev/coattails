@@ -16,6 +16,8 @@
 
   var $view = document.getElementById("view");
   var $brandMark = document.getElementById("brand-mark");
+  var $top = document.querySelector(".top");
+  var $tabs = document.querySelector(".tabs");
   var $updated = document.getElementById("updated");
   var $sheet = document.getElementById("sheet");
   var $sheetBody = document.getElementById("sheet-body");
@@ -212,6 +214,19 @@
     window.scrollTo(0, 0);
   }
 
+  var SOURCES = [
+    ["House of Representatives", "Every trade report filed by a member of the House.",
+     "https://disclosures-clerk.house.gov/FinancialDisclosure"],
+    ["United States Senate", "The Senate's own search for senators' trade reports.",
+     "https://efdsearch.senate.gov/search/"],
+    ["The SEC on Form 13F", "The SEC explaining what investors must file and when.",
+     "https://www.sec.gov/divisions/investment/13ffaq"],
+    ["The STOCK Act", "The 2012 law that requires members of Congress to report trades.",
+     "https://ethics.house.gov/financial-disclosure/stock-act"],
+    ["How this app is built", "The code that reads the filings, and the list of who it follows and why.",
+     "https://github.com/greglongdev/gonka-capital"]
+  ];
+
   function renderAbout() {
     var f = state.feed;
     var pols = f ? f.people.filter(function (p) { return p.group === "politician"; }).length : 0;
@@ -223,11 +238,18 @@
       "<li><b>Members of Congress</b> must report every stock trade within 45 days under the STOCK Act. The House posts these reports on the Clerk's website; the Senate posts them on its own filing site. Trades are reported in dollar ranges, not exact amounts, and many are made by a spouse or in a joint account. The app says which.</li>" +
       "<li><b>Investors</b> managing more than $100 million file a list of their US stock holdings with the SEC every quarter, within 45 days of quarter end (Form 13F). The app compares each new list with the previous one to show what changed. Only US-listed long positions appear; these filings do not include shorts, bonds or foreign-listed shares.</li>" +
       "</ul>" +
+      "<h2>Check any of it yourself</h2>" +
+      "<p>Every entry in this app links to the exact filing it came from. Tap a trade, then tap See the filing. These are the places those filings live.</p>" +
+      '<div class="links">' + SOURCES.map(function (s) {
+        return '<a class="link-row" href="' + esc(s[2]) + '" target="_blank" rel="noopener">' +
+          '<span class="txt"><span class="n">' + esc(s[0]) + '</span><span class="s">' + esc(s[1]) + "</span></span>" +
+          '<span class="chev">&nearr;</span></a>';
+      }).join("") + "</div>" +
       "<h2>What that means for you</h2>" +
       "<p>Everything here is at least a few weeks old by the time it is public, and up to a quarter old for the investors. A purchase you see is a record of what someone did, not a recommendation. The people on the list were chosen because their trades are verifiable and large enough to mean something, not because following them is guaranteed to work.</p>" +
       "<p>Bonds, municipal securities, private funds and similar holdings are left out so the list stays about stocks, ETFs and options.</p>" +
       "<h2>Updates</h2>" +
-      "<p>The app carries a copy of the data and checks for a newer one each time it opens. Every entry has a link to the original filing so you can read it yourself.</p>" +
+      "<p>The app carries a copy of the data and checks for a newer one each time it opens, so it works with or without a signal.</p>" +
       (f ? "<p>Data updated " + fmtDate(f.generated_at.slice(0, 10), true) + ".</p>" : "") +
       "<p>Gonka Capital is not investment advice.</p>" +
       "</div>";
@@ -309,6 +331,7 @@
     else if (h === "#people") renderPeople();
     else if (h === "#about") renderAbout();
     else renderLatest();
+    measureBars();
   }
 
   document.addEventListener("click", function (e) {
@@ -323,8 +346,49 @@
   window.addEventListener("hashchange", route);
   window.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSheet(); });
 
+  // The header and tab bar are as tall as their text, and their text is as big as
+  // the reader's phone says. Measure them and let the page's padding follow, so
+  // nothing hides behind them at any font size.
+  //
+  // What is measured must never depend on what is written, or sub-pixel rounding
+  // walks the value up one pixel per observer tick. So these two variables drive
+  // the BODY's padding only; the bars themselves size to their own content.
+  var lastHeader = 0, lastTabs = 0;
+
+  function measureBars() {
+    var r = document.documentElement;
+    var header = Math.ceil($top.getBoundingClientRect().height);
+    var tabs = Math.ceil($tabs.getBoundingClientRect().height);
+    if (header && header !== lastHeader) {
+      r.style.setProperty("--header-h", header + "px");
+      lastHeader = header;
+    }
+    if (tabs && tabs !== lastTabs) {
+      r.style.setProperty("--tabbar-h", tabs + "px");
+      lastTabs = tabs;
+    }
+  }
+
   $brandMark.innerHTML = LOGOS.get(MARK);
   loadInitial();
   route();
+  measureBars();
+  window.addEventListener("resize", measureBars);
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(measureBars);
+    // Border box, not content box: the Android wrapper reports the status bar as
+    // PADDING on the header, which leaves the content box unchanged, so a default
+    // observer never fires and the page keeps the old, too-small header height.
+    try {
+      ro.observe($top, { box: "border-box" });
+      ro.observe($tabs, { box: "border-box" });
+    } catch (e) {
+      ro.observe($top);
+      ro.observe($tabs);
+    }
+  }
+  // Those variables arrive a moment after the page loads, and again if the reader
+  // rotates or changes font size, so take a few more readings early on.
+  [60, 250, 800].forEach(function (ms) { setTimeout(measureBars, ms); });
   checkForUpdate();
 })();

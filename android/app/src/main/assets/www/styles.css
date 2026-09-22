@@ -18,8 +18,9 @@
   --sell-bg: #fbe9e7;
   --neutral: #5f646c;
   --neutral-bg: #edecea;
-  --tab-h: 64px;
-  --top-h: 56px;
+  /* Written by the app after it measures the real bars; these are the fallbacks. */
+  --header-h: 56px;
+  --tabbar-h: 64px;
   --mark-ink: #f6f5f1;
   color-scheme: light dark;
 }
@@ -48,8 +49,8 @@ body {
   color: var(--ink);
   font: 18px/1.4 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-text-size-adjust: 100%;
-  padding-bottom: calc(var(--tab-h) + var(--inset-bottom));
-  padding-top: calc(var(--top-h) + var(--inset-top));
+  padding-top: var(--header-h);
+  padding-bottom: var(--tabbar-h);
 }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; }
@@ -58,18 +59,17 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 /* Top bar */
 .top {
   position: fixed; top: 0; left: 0; right: 0;
-  height: calc(var(--top-h) + var(--inset-top));
   padding-top: var(--inset-top);
   padding-left: var(--inset-left); padding-right: var(--inset-right);
   background: var(--bg); border-bottom: 1px solid var(--line); z-index: 5;
 }
-.top-inner { max-width: 720px; margin: 0 auto; padding: 0 16px; height: var(--top-h); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.top-inner { max-width: 720px; margin: 0 auto; padding: 10px 16px; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 10px 14px; flex-wrap: wrap; }
 
 /* The name sits on every screen: this is Gonka's app, not a generic one. */
 .brand { display: flex; align-items: center; gap: 9px; min-width: 0; color: var(--accent); }
 .brand-mark { width: 28px; height: 28px; flex: none; display: block; }
 .brand-mark .mark { width: 100%; height: 100%; display: block; }
-.brand-name { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); white-space: nowrap; }
+.brand-name { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
 .updated { font-size: 14px; color: var(--muted); text-align: right; }
 .updated.live { color: var(--buy); }
 
@@ -165,18 +165,30 @@ button.card:active { transform: scale(0.995); }
 .prose ul { padding-left: 22px; margin: 0 0 14px; }
 .prose li { margin-bottom: 8px; }
 
+/* Source links on About */
+.links { margin: 0 0 16px; }
+.link-row {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 8px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; min-height: 56px;
+}
+.link-row .txt { min-width: 0; flex: 1; display: block; }
+.link-row .n { display: block; font-size: 18px; font-weight: 700; color: var(--accent); }
+.link-row .s { display: block; font-size: 15px; color: var(--muted); margin-top: 2px; }
+.link-row .chev { color: var(--muted); font-size: 20px; flex: none; }
+
 /* Tabs */
 .tabs {
-  position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--tab-h) + var(--inset-bottom));
+  position: fixed; left: 0; right: 0; bottom: 0;
   padding-bottom: var(--inset-bottom);
   padding-left: var(--inset-left); padding-right: var(--inset-right);
   background: var(--card); border-top: 1px solid var(--line); display: flex; z-index: 10;
 }
 .tab {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  color: var(--muted); font-size: 13px; font-weight: 600;
+  color: var(--muted); font-size: 13px; font-weight: 600; padding: 9px 2px; text-align: center; min-width: 0;
+  min-height: 56px; justify-content: center;
 }
-.tab svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tab svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tab.on { color: var(--accent); }
 
 @media (min-width: 720px) {
